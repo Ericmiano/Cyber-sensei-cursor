@@ -47,6 +47,8 @@ class User(Base):
     progress = relationship("UserProgress", back_populates="user", cascade="all, delete-orphan")
     mastery = relationship("UserConceptMastery", back_populates="user", cascade="all, delete-orphan")
     learning_events = relationship("LearningEvent", back_populates="user", cascade="all, delete-orphan")
+    two_factor = relationship("TwoFactorAuth", back_populates="user", uselist=False, cascade="all, delete-orphan")
+    backup_codes = relationship("TwoFactorBackupCode", back_populates="user", cascade="all, delete-orphan")
 
 
 class UserProfile(Base):

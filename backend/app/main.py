@@ -1,6 +1,8 @@
 """FastAPI application entry point."""
 from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.trustedhost import TrustedHostMiddleware
+from starlette.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 from sqlalchemy.exc import SQLAlchemyError
@@ -8,7 +10,10 @@ import time
 import logging
 from app.core.config import settings
 from app.core.logging_config import setup_logging, logger
-from app.api.routers import auth, curriculum, quiz, recommendations, labs, meta_learning, topics, documents
+from app.api.routers import (
+    auth, curriculum, quiz, recommendations, labs, meta_learning, 
+    topics, documents, chat, training, progress, achievements, two_factor, two_factor_verify
+)
 from app.core.error_handlers import (
     AppException,
     DatabaseError,
@@ -25,7 +30,19 @@ app = FastAPI(
     title=settings.APP_NAME,
     version=settings.APP_VERSION,
     description="Intelligent adaptive learning platform with AI-generated personalized content",
+    docs_url="/docs" if settings.DEBUG else None,  # Hide docs in production
+    redoc_url="/redoc" if settings.DEBUG else None,
+    openapi_url="/openapi.json" if settings.DEBUG else None,
 )
+
+# Security: Add trusted host middleware
+app.add_middleware(
+    TrustedHostMiddleware,
+    allowed_hosts=["localhost", "127.0.0.1"] if settings.ENVIRONMENT == "development" else ["yourdomain.com"],
+)
+
+# Performance: Add compression middleware
+app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 # CORS middleware with environment-based configuration
 app.add_middleware(
@@ -36,7 +53,21 @@ app.add_middleware(
     allow_headers=settings.CORS_ALLOW_HEADERS,
 )
 
-# Request logging middleware
+# Security: Add security headers middleware
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    """Add security headers to all responses."""
+    response = await call_next(request)
+    
+    # Security headers
+    response.headers["X-Content-Type-Options"] = "nosniff"  # Prevent MIME sniffing
+    response.headers["X-Frame-Options"] = "DENY"  # Prevent clickjacking
+    response.headers["X-XSS-Protection"] = "1; mode=block"  # XSS protection
+    
+    if settings.ENVIRONMENT == "production":
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"  # HTTPS only
+    
+    return response
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
     """Log all requests with timing information."""
@@ -162,6 +193,12 @@ async def general_exception_handler(request: Request, exc: Exception):
 
 # Include routers
 app.include_router(auth.router, prefix="/api")
+app.include_router(two_factor_verify.router, prefix="/api")
+app.include_router(two_factor.router, prefix="/api")
+app.include_router(training.router, prefix="/api")
+app.include_router(progress.router, prefix="/api")
+app.include_router(achievements.router, prefix="/api")
+app.include_router(chat.router, prefix="/api")
 app.include_router(curriculum.router, prefix="/api")
 app.include_router(quiz.router, prefix="/api")
 app.include_router(recommendations.router, prefix="/api")

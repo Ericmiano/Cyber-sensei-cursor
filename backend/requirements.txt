@@ -21,6 +21,8 @@ hiredis>=2.3.0,<3.0.0  # For better performance
 python-jose[cryptography]>=3.3.0,<4.0.0
 passlib[bcrypt]>=1.7.4,<2.0.0
 python-multipart>=0.0.12,<1.0.0
+pyotp>=2.9.0,<3.0.0
+qrcode[pil]>=7.4.2,<8.0.0
 
 # Utilities
 python-dotenv>=1.0.1,<2.0.0

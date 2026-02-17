@@ -36,7 +36,7 @@ class Settings(BaseSettings):
     CELERY_RESULT_BACKEND: str = "redis://localhost:6379/2"
     
     # JWT
-    SECRET_KEY: Optional[str] = None  # Must be set via environment variable
+    SECRET_KEY: str  # Required, not Optional
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
@@ -119,19 +119,18 @@ class Settings(BaseSettings):
     
     def model_post_init(self, __context):
         """Validate settings after initialization."""
-        # Validate critical settings
-        if not self.SECRET_KEY or self.SECRET_KEY == "your-secret-key-change-in-production":
-            import secrets
-            generated_key = secrets.token_urlsafe(32)
+        # Validate SECRET_KEY
+        if not self.SECRET_KEY or len(self.SECRET_KEY) < 32:
             if self.ENVIRONMENT == "production":
                 raise ValueError(
-                    "SECRET_KEY must be set in production environment. "
-                    f"Generated key for development: {generated_key}"
+                    "SECRET_KEY must be set and at least 32 characters in production environment"
                 )
             else:
+                import secrets
                 import warnings
+                generated_key = secrets.token_urlsafe(32)
                 warnings.warn(
-                    f"SECRET_KEY not set. Using generated key for development: {generated_key}",
+                    f"SECRET_KEY not set or too short. Using generated key for development: {generated_key}",
                     UserWarning
                 )
                 object.__setattr__(self, 'SECRET_KEY', generated_key)

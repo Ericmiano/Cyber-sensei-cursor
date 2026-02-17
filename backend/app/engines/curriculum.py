@@ -32,6 +32,8 @@ class CurriculumEngine:
         - Topological sort for prerequisite ordering
         - Bloom weighting for difficulty progression
         - User mastery data to skip known concepts
+        
+        Optimized to avoid N+1 queries.
         """
         try:
             # Validate inputs
@@ -45,8 +47,11 @@ class CurriculumEngine:
             except ValueError as e:
                 raise ValueError(f"Invalid UUID format: {e}")
             
-            # Get all concepts for the topic
-            stmt = select(Concept).where(Concept.topic_id == topic_uuid)
+            # Get all concepts for the topic with eager loading
+            from sqlalchemy.orm import selectinload
+            stmt = select(Concept).where(Concept.topic_id == topic_uuid).options(
+                selectinload(Concept.prerequisites)
+            )
             result = await self.db.execute(stmt)
             concepts = result.scalars().all()
             
@@ -54,17 +59,19 @@ class CurriculumEngine:
                 logger.warning(f"No concepts found for topic {topic_id}")
                 return []
             
-            # Get user mastery for these concepts
+            concept_ids = [c.id for c in concepts]
+            
+            # Get ALL user mastery for these concepts in ONE query (fix N+1)
             mastery_stmt = select(UserConceptMastery).where(
                 UserConceptMastery.user_id == user_uuid,
-                UserConceptMastery.concept_id.in_([c.id for c in concepts])
+                UserConceptMastery.concept_id.in_(concept_ids)
             )
             mastery_result = await self.db.execute(mastery_stmt)
             mastery_dict = {m.concept_id: m.mastery_probability for m in mastery_result.scalars().all()}
             
-            # Get prerequisite edges
+            # Get ALL prerequisite edges in ONE query (fix N+1)
             edges_stmt = select(ConceptEdge).where(
-                ConceptEdge.concept_id.in_([c.id for c in concepts])
+                ConceptEdge.concept_id.in_(concept_ids)
             )
             edges_result = await self.db.execute(edges_stmt)
             edges = edges_result.scalars().all()

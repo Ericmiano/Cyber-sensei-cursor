@@ -3,17 +3,20 @@ from typing import List, Dict, Optional
 from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_
+from sqlalchemy.orm import selectinload
 from app.models.learning import UserConceptMastery, SpacedRepetitionSchedule, UserProgress
 from app.models.topics import Concept, ContentItem
+from app.services.cache_service import cached
 from datetime import datetime
 
 
 class RecommendationEngine:
-    """Generates explainable recommendations for next learning steps."""
+    """Generates explainable recommendations for next learning steps with caching."""
     
     def __init__(self, db: AsyncSession):
         self.db = db
     
+    @cached(ttl=300, key_prefix="recommendations")
     async def get_recommendations(
         self,
         user_id: str,
@@ -21,6 +24,8 @@ class RecommendationEngine:
     ) -> List[Dict]:
         """
         Generate personalized recommendations with explicit reasoning.
+        
+        Cached for 5 minutes to improve performance.
         
         Returns recommendations with:
         - Action type (review, learn, practice, etc.)
@@ -50,7 +55,7 @@ class RecommendationEngine:
                 "concept_id": str(concept["concept_id"]),
                 "concept_name": concept["concept_name"],
                 "reasoning": f"Mastery of '{concept['concept_name']}' is {concept['mastery']:.1%} (below 70% threshold). Focus on building foundational understanding.",
-                "priority": 0.8 - concept["mastery"],  # Higher priority for lower mastery
+                "priority": 0.8 - concept["mastery"],
                 "action": "Study concept",
             })
         
@@ -71,7 +76,7 @@ class RecommendationEngine:
         return recommendations[:limit]
     
     async def _get_due_reviews(self, user_id: str) -> List[Dict]:
-        """Get concepts that are due for spaced repetition review."""
+        """Get concepts that are due for spaced repetition review (optimized)."""
         user_uuid = UUID(user_id)
         stmt = select(
             SpacedRepetitionSchedule,
@@ -83,6 +88,8 @@ class RecommendationEngine:
                 SpacedRepetitionSchedule.user_id == user_uuid,
                 SpacedRepetitionSchedule.next_review_date <= datetime.utcnow(),
             )
+        ).options(
+            selectinload(Concept.topic)
         )
         result = await self.db.execute(stmt)
         reviews = []
@@ -100,7 +107,7 @@ class RecommendationEngine:
         user_id: str,
         threshold: float = 0.7,
     ) -> List[Dict]:
-        """Get concepts with mastery below threshold."""
+        """Get concepts with mastery below threshold (optimized)."""
         user_uuid = UUID(user_id)
         stmt = select(
             UserConceptMastery,
@@ -114,7 +121,7 @@ class RecommendationEngine:
             )
         ).order_by(
             UserConceptMastery.mastery_probability.asc()
-        )
+        ).limit(10)  # Limit to top 10 lowest mastery
         result = await self.db.execute(stmt)
         concepts = []
         for mastery, concept in result.all():
@@ -126,7 +133,7 @@ class RecommendationEngine:
         return concepts
     
     async def _get_incomplete_content(self, user_id: str) -> List[Dict]:
-        """Get content items that are in progress but not completed."""
+        """Get content items that are in progress but not completed (optimized)."""
         user_uuid = UUID(user_id)
         stmt = select(
             UserProgress,
@@ -141,7 +148,7 @@ class RecommendationEngine:
             )
         ).order_by(
             UserProgress.last_accessed_at.desc()
-        )
+        ).limit(5)  # Limit to 5 most recent
         result = await self.db.execute(stmt)
         items = []
         for progress, content in result.all():
