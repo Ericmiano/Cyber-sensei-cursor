@@ -1,0 +1,17 @@
+.hyperspeed-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  /* negative z-index ensures the canvas is always behind any other element */
+  z-index: -1;
+  pointer-events: none; /* allow clicks through to UI */
+  overflow: hidden;
+}
+
+.hyperspeed-container canvas {
+  width: 100% !important;
+  height: 100% !important;
+  display: block;
+}

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { 
   BookOpen, 
@@ -24,19 +24,106 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { useUserProgress } from "@/contexts/UserProgressContext";
-import { useBackendTraining } from "@/hooks/useBackendTraining";
-import InteractiveCard from "@/components/effects/InteractiveCard";
-import { MagneticButton } from "@/components/effects/MagneticButton";
 
-const iconMap: Record<string, typeof Shield> = {
-  Shield,
-  Network,
-  Lock,
-  Bug,
-  Code,
-  AlertTriangle,
-  Server,
-};
+interface Module {
+  id: string;
+  title: string;
+  description: string;
+  icon: typeof Shield;
+  category: string;
+  difficulty: "beginner" | "intermediate" | "advanced";
+  lessons: number;
+  completedLessons: number;
+  duration: string;
+  status: "locked" | "in-progress" | "completed";
+}
+
+const modules: Module[] = [
+  {
+    id: "1",
+    title: "Cybersecurity Fundamentals",
+    description: "Master the core concepts of information security, threat landscapes, and defense strategies.",
+    icon: Shield,
+    category: "fundamentals",
+    difficulty: "beginner",
+    lessons: 12,
+    completedLessons: 8,
+    duration: "3 hours",
+    status: "in-progress",
+  },
+  {
+    id: "2",
+    title: "Network Security",
+    description: "Learn to protect networks from intrusions, monitor traffic, and implement firewalls.",
+    icon: Network,
+    category: "networking",
+    difficulty: "intermediate",
+    lessons: 15,
+    completedLessons: 15,
+    duration: "4 hours",
+    status: "completed",
+  },
+  {
+    id: "3",
+    title: "Cryptography Essentials",
+    description: "Understand encryption, hashing, digital signatures, and key management.",
+    icon: Lock,
+    category: "fundamentals",
+    difficulty: "intermediate",
+    lessons: 10,
+    completedLessons: 0,
+    duration: "2.5 hours",
+    status: "locked",
+  },
+  {
+    id: "4",
+    title: "Ethical Hacking",
+    description: "Learn penetration testing, vulnerability assessment, and ethical hacking methodologies.",
+    icon: Bug,
+    category: "offensive",
+    difficulty: "advanced",
+    lessons: 20,
+    completedLessons: 5,
+    duration: "6 hours",
+    status: "in-progress",
+  },
+  {
+    id: "5",
+    title: "Secure Coding Practices",
+    description: "Write secure code, prevent common vulnerabilities, and follow security best practices.",
+    icon: Code,
+    category: "development",
+    difficulty: "intermediate",
+    lessons: 14,
+    completedLessons: 0,
+    duration: "3.5 hours",
+    status: "locked",
+  },
+  {
+    id: "6",
+    title: "Incident Response",
+    description: "Handle security incidents, perform forensic analysis, and implement recovery procedures.",
+    icon: AlertTriangle,
+    category: "operations",
+    difficulty: "advanced",
+    lessons: 16,
+    completedLessons: 0,
+    duration: "4.5 hours",
+    status: "locked",
+  },
+  {
+    id: "7",
+    title: "Cloud Security",
+    description: "Secure cloud infrastructure, manage identities, and protect cloud-native applications.",
+    icon: Server,
+    category: "infrastructure",
+    difficulty: "advanced",
+    lessons: 18,
+    completedLessons: 0,
+    duration: "5 hours",
+    status: "locked",
+  },
+];
 
 const categories = [
   { id: "all", label: "All Modules" },
@@ -57,35 +144,22 @@ const difficultyColors = {
 export default function TrainingPage() {
   const [activeCategory, setActiveCategory] = useState("all");
   const { progress } = useUserProgress();
-  const { modules, loading } = useBackendTraining();
 
   const filteredModules = modules.filter(
     (module) => activeCategory === "all" || module.category === activeCategory
   );
 
-  const totalProgress = modules.length > 0 
-    ? Math.round(
-        (modules.reduce((acc, m) => acc + (m.completedLessons || 0), 0) /
-          modules.reduce((acc, m) => acc + (m.totalLessons || 0), 0)) *
-          100
-      )
-    : 0;
+  const totalProgress = Math.round(
+    (modules.reduce((acc, m) => acc + m.completedLessons, 0) /
+      modules.reduce((acc, m) => acc + m.lessons, 0)) *
+      100
+  );
 
-  if (loading) {
-    return (
-      <div className="p-6 max-w-7xl mx-auto">
-        <div className="animate-pulse space-y-6">
-          <div className="h-8 bg-muted rounded w-64" />
-          <div className="h-32 bg-muted rounded" />
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[1, 2, 3, 4, 5, 6].map(i => (
-              <div key={i} className="h-64 bg-muted rounded" />
-            ))}
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // Calculate user's completed lessons per module
+  const getModuleProgress = (moduleId: string) => {
+    const moduleLessons = progress.lessonsCompleted.filter(l => l.moduleId === moduleId);
+    return moduleLessons.filter(l => l.completed).length;
+  };
 
   return (
     <div className="p-4 sm:p-6 max-w-7xl mx-auto">
@@ -163,121 +237,111 @@ export default function TrainingPage() {
       {/* Modules Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
         {filteredModules.map((module, index) => {
-          const Icon = iconMap[module.icon] || Shield;
-          const completedLessons = module.completedLessons || 0;
-          const totalLessons = module.totalLessons || 1;
-          const status = completedLessons === 0 ? "locked" : completedLessons === totalLessons ? "completed" : "in-progress";
+          const userProgress = getModuleProgress(module.id);
+          const effectiveCompleted = Math.max(module.completedLessons, userProgress);
           
           return (
-            <InteractiveCard
+            <Card
               key={module.id}
               className={cn(
+                "group relative overflow-hidden transition-all duration-300",
+                "bg-card/50 border-border/50",
+                "hover:border-primary/50 hover-lift interactive-card",
+                module.status === "locked" && "opacity-60 grayscale",
                 "animate-slide-up"
               )}
-              style={{ animationDelay: `${index * 100}ms` } as any}
-              enableTilt={true}
-              enableMagnetic={true}
-              enableGlow={true}
-              enableBrackets={true}
+              style={{ animationDelay: `${index * 100}ms` }}
             >
-              <Card
+            {module.status === "completed" && (
+              <div className="absolute top-4 right-4">
+                <CheckCircle2 className="h-6 w-6 text-neon-green" />
+              </div>
+            )}
+
+            <CardHeader className="pb-4">
+              <div className="flex items-start gap-4">
+                <div
+                  className={cn(
+                    "w-12 h-12 rounded-lg flex items-center justify-center",
+                    "bg-primary/10 group-hover:bg-primary/20",
+                    "transition-colors duration-300"
+                  )}
+                >
+                  <module.icon className="h-6 w-6 text-primary" />
+                </div>
+                <div className="flex-1">
+                  <CardTitle className="font-cyber text-lg group-hover:text-primary transition-colors">
+                    {module.title}
+                  </CardTitle>
+                  <div className="flex items-center gap-2 mt-2">
+                    <Badge
+                      variant="outline"
+                      className={cn("text-xs", difficultyColors[module.difficulty])}
+                    >
+                      {module.difficulty}
+                    </Badge>
+                    <Badge variant="outline" className="text-xs">
+                      <Clock className="h-3 w-3 mr-1" />
+                      {module.duration}
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+            </CardHeader>
+
+            <CardContent>
+              <CardDescription className="mb-4">{module.description}</CardDescription>
+
+              {/* Progress */}
+              <div className="mb-4">
+                <div className="flex justify-between text-sm mb-2">
+                  <span className="text-muted-foreground">Progress</span>
+                  <span className="text-primary font-medium">
+                    {effectiveCompleted}/{module.lessons} lessons
+                  </span>
+                </div>
+                <Progress
+                  value={(effectiveCompleted / module.lessons) * 100}
+                  className="h-2 bg-muted"
+                />
+              </div>
+
+              {/* Action Button */}
+              <Button
+                asChild={module.status !== "locked"}
                 className={cn(
-                  "group relative overflow-hidden transition-all duration-300 h-full",
-                  "bg-card/50 border-border/50",
-                  status === "locked" && "opacity-60 grayscale"
+                  "w-full font-medium transition-all",
+                  module.status === "locked"
+                    ? "bg-muted text-muted-foreground cursor-not-allowed"
+                    : module.status === "completed"
+                    ? "bg-neon-green/20 text-neon-green hover:bg-neon-green/30 hover:scale-[1.02]"
+                    : "bg-primary hover:bg-primary/90 neon-glow-cyan hover:scale-[1.02]"
                 )}
+                disabled={module.status === "locked"}
               >
-              {status === "completed" && (
-                <div className="absolute top-4 right-4 z-10">
-                  <CheckCircle2 className="h-6 w-6 text-neon-green" />
-                </div>
-              )}
-
-              <CardHeader className="pb-4">
-                <div className="flex items-start gap-4">
-                  <div
-                    className={cn(
-                      "w-12 h-12 rounded-lg flex items-center justify-center",
-                      "bg-primary/10 group-hover:bg-primary/20",
-                      "transition-colors duration-300"
-                    )}
-                  >
-                    <Icon className="h-6 w-6 text-primary" />
-                  </div>
-                  <div className="flex-1">
-                    <CardTitle className="font-cyber text-lg group-hover:text-primary transition-colors">
-                      {module.title}
-                    </CardTitle>
-                    <div className="flex items-center gap-2 mt-2">
-                      <Badge
-                        variant="outline"
-                        className={cn("text-xs", difficultyColors[module.difficulty as keyof typeof difficultyColors])}
-                      >
-                        {module.difficulty}
-                      </Badge>
-                      <Badge variant="outline" className="text-xs">
-                        <Clock className="h-3 w-3 mr-1" />
-                        {module.estimatedHours}h
-                      </Badge>
-                    </div>
-                  </div>
-                </div>
-              </CardHeader>
-
-              <CardContent>
-                <CardDescription className="mb-4">{module.description}</CardDescription>
-
-                {/* Progress */}
-                <div className="mb-4">
-                  <div className="flex justify-between text-sm mb-2">
-                    <span className="text-muted-foreground">Progress</span>
-                    <span className="text-primary font-medium">
-                      {completedLessons}/{totalLessons} lessons
-                    </span>
-                  </div>
-                  <Progress
-                    value={(completedLessons / totalLessons) * 100}
-                    className="h-2 bg-muted"
-                  />
-                </div>
-
-                {/* Action Button */}
-                {status === "locked" ? (
-                  <Button
-                    className="w-full bg-muted text-muted-foreground cursor-not-allowed"
-                    disabled
-                  >
+                {module.status === "locked" ? (
+                  <>
                     <Lock className="h-4 w-4 mr-2" />
                     Locked
-                  </Button>
+                  </>
                 ) : (
-                  <Link to={`/training/${module.id}`} className="block">
-                    <MagneticButton
-                      className={cn(
-                        "w-full font-medium",
-                        status === "completed"
-                          ? "bg-neon-green/20 text-neon-green hover:bg-neon-green/30"
-                          : "neon-glow-cyan"
-                      )}
-                      strength={0.2}
-                    >
-                      {status === "completed" ? (
-                        <>
-                          <Star className="h-4 w-4 mr-2" />
-                          Review Module
-                        </>
-                      ) : (
-                        <>
-                          Continue Learning
-                          <ChevronRight className="h-4 w-4 ml-2" />
-                        </>
-                      )}
-                    </MagneticButton>
+                  <Link to={`/training/${module.id}`}>
+                    {module.status === "completed" ? (
+                      <>
+                        <Star className="h-4 w-4 mr-2" />
+                        Review Module
+                      </>
+                    ) : (
+                      <>
+                        Continue Learning
+                        <ChevronRight className="h-4 w-4 ml-2" />
+                      </>
+                    )}
                   </Link>
                 )}
-              </CardContent>
-            </Card>
-          </InteractiveCard>
+              </Button>
+            </CardContent>
+          </Card>
           );
         })}
       </div>

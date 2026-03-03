@@ -1,10 +1,13 @@
 import { useTheme } from "@/contexts/ThemeContext";
 
 export default function ScanlineOverlay() {
-  const { theme } = useTheme();
-  const opacity = theme.animationIntensity / 500; // maps 0-100 to 0-0.2
+  // ThemeContext stores preferences; older code expected a `theme` object.
+  // Safely read whether animations are enabled and map to a modest opacity.
+  const { preferences } = useTheme();
+  const animationsEnabled = preferences?.animations_enabled ?? true;
+  const opacity = animationsEnabled ? 0.12 : 0;
 
-  if (opacity <= 0) return null;
+  if (!animationsEnabled || opacity <= 0) return null;
 
   return (
     <div

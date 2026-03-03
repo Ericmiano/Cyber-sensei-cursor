@@ -10,8 +10,9 @@ export interface ChatMessage {
 
 interface ChatHistoryContextType {
   messages: ChatMessage[];
-  addMessage: (message: Omit<ChatMessage, "id" | "timestamp">) => void;
-  clearHistory: () => void;
+  addMessage: (message: Omit<ChatMessage, "id" | "timestamp">) => Promise<void>;
+  clearHistory: () => Promise<void>;
+  isLoading?: boolean;
 }
 
 const ChatHistoryContext = createContext<ChatHistoryContextType | undefined>(undefined);

@@ -1,6 +1,9 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Shield, Zap, Mail, Lock, User, Eye, EyeOff, Loader2, ArrowRight } from "lucide-react";
+import Hyperspeed from "@/components/effects/Hyperspeed";
+import CursorEffects from "@/components/effects/CursorEffects";
+import ScanlineOverlay from "@/components/effects/ScanlineOverlay";
 import { TwoFactorVerify } from "@/components/auth/TwoFactorVerify";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -93,7 +96,19 @@ export default function AuthPage() {
   // Show 2FA verification if needed
   if (show2FA) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-6 bg-background cyber-grid">
+      <div className="min-h-screen flex items-center justify-center p-6 bg-background/20 cyber-grid relative overflow-hidden">
+        <Hyperspeed 
+          colors={{
+            roadColor: 0x080808,
+            islandColor: 0x0a0a0a,
+            background: 0x000000,
+            leftCars: [0xff102a, 0xeb383e, 0xff102a],
+            rightCars: [0xffb700, 0xcc5500, 0xff8800],
+            sticks: 0xffb700
+          }}
+        />
+        <CursorEffects />
+        <ScanlineOverlay />
         <div className="absolute inset-0 gradient-cyber opacity-30" />
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-primary/5 rounded-full blur-3xl" />
         <div className="relative w-full max-w-md animate-slide-up">
@@ -108,7 +123,20 @@ export default function AuthPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-6 bg-background cyber-grid">
+    <div className="min-h-screen flex items-center justify-center p-6 bg-background/20 cyber-grid relative overflow-hidden">
+      {/* full‑screen moving starfield behind auth UI */}
+      <Hyperspeed 
+        colors={{
+          roadColor: 0x080808,
+          islandColor: 0x0a0a0a,
+          background: 0x000000,
+          leftCars: [0xff102a, 0xeb383e, 0xff102a],
+          rightCars: [0xffb700, 0xcc5500, 0xff8800],
+          sticks: 0xffb700
+        }}
+      />
+      <CursorEffects />
+      <ScanlineOverlay />
       {/* Background effects */}
       <div className="absolute inset-0 gradient-cyber opacity-30" />
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-primary/5 rounded-full blur-3xl" />
