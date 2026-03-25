@@ -1,0 +1,13 @@
+{
+  "plugins": {
+    "linear": {
+      "enabled": true
+    },
+    "parallel": {
+      "enabled": true
+    },
+    "continual-learning": {
+      "enabled": true
+    }
+  }
+}

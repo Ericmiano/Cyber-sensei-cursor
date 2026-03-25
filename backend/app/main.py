@@ -10,10 +10,7 @@ import time
 import logging
 from app.core.config import settings
 from app.core.logging_config import setup_logging, logger
-from app.api.routers import (
-    auth, curriculum, quiz, recommendations, labs, meta_learning, 
-    topics, documents, chat, training, progress, achievements, two_factor, two_factor_verify
-)
+from app.api.routers import auth, curriculum, quiz, recommendations, labs, meta_learning, topics, documents, chat
 from app.core.error_handlers import (
     AppException,
     DatabaseError,
@@ -193,12 +190,6 @@ async def general_exception_handler(request: Request, exc: Exception):
 
 # Include routers
 app.include_router(auth.router, prefix="/api")
-app.include_router(two_factor_verify.router, prefix="/api")
-app.include_router(two_factor.router, prefix="/api")
-app.include_router(training.router, prefix="/api")
-app.include_router(progress.router, prefix="/api")
-app.include_router(achievements.router, prefix="/api")
-app.include_router(chat.router, prefix="/api")
 app.include_router(curriculum.router, prefix="/api")
 app.include_router(quiz.router, prefix="/api")
 app.include_router(recommendations.router, prefix="/api")

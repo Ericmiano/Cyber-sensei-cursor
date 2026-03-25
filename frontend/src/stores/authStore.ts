@@ -6,10 +6,12 @@ const getApiBaseUrl = (): string => {
   // Check if running in Capacitor (mobile)
   if (typeof window !== 'undefined' && (window as any).Capacitor) {
     // For mobile, use the backend server URL
-    return process.env.VITE_API_URL || 'http://localhost:8000'
+    // import.meta.env is the Vite way to access env vars in the browser build
+    // fall back to localhost for development on device/emulator
+    return (import.meta as any).env?.VITE_API_URL || 'http://localhost:8000'
   }
   // For web/Electron, use relative path or proxy
-  return process.env.VITE_API_URL || '/api'
+  return (import.meta as any).env?.VITE_API_URL || '/api'
 }
 
 // Configure axios base URL

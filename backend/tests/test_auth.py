@@ -14,7 +14,9 @@ def test_register_user(client):
         },
     )
     assert response.status_code == status.HTTP_201_CREATED
-    assert "user_id" in response.json()
+    data = response.json()
+    assert "user" in data
+    assert "access_token" in data
 
 
 def test_register_weak_password(client):
